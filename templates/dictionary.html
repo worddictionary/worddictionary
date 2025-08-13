@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>한국어 단어 사전</title>
+    <script src="https://cdn.jsdelivr.net/npm/meilisearch@0.33.0/dist/bundles/meilisearch.umd.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .title {
+            color: white;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.2rem;
+            font-weight: 300;
+        }
+
+        .search-container {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            font-size: 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .results-container {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            min-height: 400px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .results-count {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .sort-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .sort-btn {
+            padding: 8px 15px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .sort-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .word-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .word-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border-left: 5px solid #667eea;
+        }
+
+        .word-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .word-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .word-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .word-title mark {
+            background: linear-gradient(120deg, #a8e6cf 0%, #dcedc8 100%);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .word-pos {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .word-pronunciation {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 10px;
+        }
+
+        .word-meaning {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .word-meaning mark {
+            background: linear-gradient(120deg, #fff9c4 0%, #fff59d 100%);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .word-example {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            margin: 15px 0;
+        }
+
+        .word-example-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .word-example-text {
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .word-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .word-tag {
+            background: #f0f0f0;
+            color: #666;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .loading i {
+            font-size: 48px;
+            color: #667eea;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .no-results i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .suggestions {
+            background: rgba(255,255,255,0.9);
+            border-radius: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background: #f8f9ff;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        .page-btn {
+            padding: 10px 15px;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .page-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .page-btn:hover:not(.active) {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .title {
+                font-size: 2rem;
+            }
+            
+            .search-box {
+                flex-direction: column;
+            }
+            
+            .search-btn {
+                justify-content: center;
+            }
+            
+            .word-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">📚 한국어 단어 사전</h1>
+            <p class="subtitle">Korean Dictionary - 빠르고 정확한 단어 검색</p>
+        </div>
+
+        <div class="search-container">
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    class="search-input" 
+                    placeholder="검색할 단어를 입력하세요..." 
+                    id="searchInput"
+                    autocomplete="off"
+                >
+                <button class="search-btn" onclick="search()">
+                    <i class="fas fa-search"></i>
+                    검색
+                </button>
+            </div>
+            
+            <div class="suggestions" id="suggestions"></div>
+            
+            <div class="filters">
+                <div class="filter-btn active" data-filter="">전체</div>
+                <div class="filter-btn" data-filter="명사">명사</div>
+                <div class="filter-btn" data-filter="동사">동사</div>
+                <div class="filter-btn" data-filter="형용사">형용사</div>
+                <div class="filter-btn" data-filter="부사">부사</div>
+                <div class="filter-btn" data-filter="감탄사">감탄사</div>
+                <div class="filter-btn" data-filter="대명사">대명사</div>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <div class="results-header" style="display: none;" id="resultsHeader">
+                <div class="results-count" id="resultsCount">검색 결과를 기다리는 중...</div>
+                <div class="sort-options">
+                    <div class="sort-btn active" data-sort="relevance">관련도순</div>
+                    <div class="sort-btn" data-sort="alphabetical">가나다순</div>
+                </div>
+            </div>
+            
+            <div class="word-grid" id="results">
+                <div class="no-results">
+                    <i class="fas fa-book-open"></i>
+                    <h3>단어를 검색해보세요</h3>
+                    <p>궁금한 단어를 위 검색창에 입력해주세요</p>
+                </div>
+            </div>
+            
+            <div class="pagination" id="pagination" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const meilisearchClient = new MeiliSearch({
+            host: 'https://ms-0dccda003a1d-28196.jpn.meilisearch.io',
+            apiKey: '5291686df82c722e2bf2343bbe0932ca0b97a01bc1db890e04e841fc94e1bcd9'
+        })
+
+        let currentResults = []
+        let currentPage = 1
+        let currentFilter = ''
+        let currentSort = 'relevance'
+        const resultsPerPage = 10
+
+        // 검색 입력 이벤트
+        document.getElementById('searchInput').addEventListener('input', debounce(handleSearchInput, 300))
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') search()
+        })
+
+        // 필터 이벤트
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'))
+                btn.classList.add('active')
+                currentFilter = btn.dataset.filter
+                if (document.getElementById('searchInput').value.trim()) {
+                    search()
+                }
+            })
+        })
+
+        // 정렬 이벤트
+        document.querySelectorAll('.sort-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'))
+                btn.classList.add('active')
+                currentSort = btn.dataset.sort
+                if (currentResults.length > 0) {
+                    displayResults(currentResults)
+                }
+            })
+        })
+
+        function debounce(func, wait) {
+            let timeout
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout)
+                    func(...args)
+                }
+                clearTimeout(timeout)
+                timeout = setTimeout(later, wait)
+            }
+        }
+
+        async function handleSearchInput() {
+            const query = document.getElementById('searchInput').value.trim()
+            if (query.length > 0) {
+                await showSuggestions(query)
+            } else {
+                hideSuggestions()
+            }
+        }
+
+        async function showSuggestions(query) {
+            try {
+                const index = meilisearchClient.index('word-dictionary')
+                const results = await index.search(query, {
+                    limit: 5,
+                    attributesToSearchOn: ['표제어']
+                })
+
+                const suggestionsDiv = document.getElementById('suggestions')
+                if (results.hits.length > 0) {
+                    suggestionsDiv.innerHTML = results.hits.map(hit => 
+                        `<div class="suggestion-item" onclick="selectSuggestion('${hit.표제어}')">${hit.표제어} (${hit.품사})</div>`
+                    ).join('')
+                    suggestionsDiv.style.display = 'block'
+                } else {
+                    hideSuggestions()
+                }
+            } catch (error) {
+                console.error('Suggestions error:', error)
+                hideSuggestions()
+            }
+        }
+
+        function hideSuggestions() {
+            document.getElementById('suggestions').style.display = 'none'
+        }
+
+        function selectSuggestion(word) {
+            document.getElementById('searchInput').value = word
+            hideSuggestions()
+            search()
+        }
+
+        async function search() {
+            const query = document.getElementById('searchInput').value.trim()
+            
+            if (!query) {
+                showNoResults('검색어를 입력해주세요')
+                return
+            }
+
+            hideSuggestions()
+            showLoading()
+
+            try {
+                const index = meilisearchClient.index('word-dictionary')
+                
+                let searchParams = {
+                    limit: 1000, // 모든 결과를 가져와서 클라이언트에서 페이지네이션
+                    attributesToHighlight: ['표제어', '뜻풀이', '용례'],
+                    highlightPreTag: '<mark>',
+                    highlightPostTag: '</mark>'
+                }
+
+                if (currentFilter) {
+                    searchParams.filter = [`품사 = "${currentFilter}"`]
+                }
+
+                const results = await index.search(query, searchParams)
+                currentResults = results.hits
+                currentPage = 1
+
+                if (currentResults.length === 0) {
+                    showNoResults(`"${query}"에 대한 검색 결과가 없습니다`)
+                } else {
+                    displayResults(currentResults)
+                    updateResultsCount(results.estimatedTotalHits, query)
+                }
+
+            } catch (error) {
+                console.error('Search error:', error)
+                showNoResults('검색 중 오류가 발생했습니다')
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('results').innerHTML = `
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <p>검색 중...</p>
+                </div>
+            `
+            document.getElementById('resultsHeader').style.display = 'none'
+            document.getElementById('pagination').style.display = 'none'
+        }
+
+        function showNoResults(message) {
+            document.getElementById('results').innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-search"></i>
+                    <h3>${message}</h3>
+                    <p>다른 검색어를 시도해보세요</p>
+                </div>
+            `
+            document.getElementById('resultsHeader').style.display = 'none'
+            document.getElementById('pagination').style.display = 'none'
+        }
+
+        function updateResultsCount(total, query) {
+            document.getElementById('resultsCount').textContent = 
+                `"${query}"에 대한 검색 결과: ${total.toLocaleString()}개`
+            document.getElementById('resultsHeader').style.display = 'flex'
+        }
+
+        function displayResults(results) {
+            // 정렬
+            let sortedResults = [...results]
+            if (currentSort === 'alphabetical') {
+                sortedResults.sort((a, b) => a.표제어.localeCompare(b.표제어, 'ko'))
+            }
+
+            // 페이지네이션
+            const startIndex = (currentPage - 1) * resultsPerPage
+            const endIndex = startIndex + resultsPerPage
+            const pageResults = sortedResults.slice(startIndex, endIndex)
+
+            const resultsHTML = pageResults.map(word => {
+                const formatted = word._formatted || word
+                
+                return `
+                    <div class="word-card">
+                        <div class="word-header">
+                            <div>
+                                <div class="word-title">${formatted.표제어 || word.표제어}</div>
+                                ${word.발음 ? `<div class="word-pronunciation">[${word.발음}]</div>` : ''}
+                            </div>
+                            <div class="word-pos">${word.품사 || '미상'}</div>
+                        </div>
+                        
+                        <div class="word-meaning">${formatted.뜻풀이 || word.뜻풀이 || '뜻풀이 없음'}</div>
+                        
+                        ${word.용례 ? `
+                            <div class="word-example">
+                                <div class="word-example-title">📝 용례</div>
+                                <div class="word-example-text">${formatted.용례 || word.용례}</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="word-tags">
+                            ${word.범주 ? `<span class="word-tag">📂 ${word.범주}</span>` : ''}
+                            ${word.전문분야 ? `<span class="word-tag">🔬 ${word.전문분야}</span>` : ''}
+                            ${word.고유어여부 ? `<span class="word-tag">🏷️ ${word.고유어여부}</span>` : ''}
+                            ${word.관련어 ? `<span class="word-tag">🔗 ${word.관련어}</span>` : ''}
+                        </div>
+                    </div>
+                `
+            }).join('')
+
+            document.getElementById('results').innerHTML = resultsHTML
+            
+            // 페이지네이션 업데이트
+            updatePagination(sortedResults.length)
+        }
+
+        function updatePagination(totalResults) {
+            const totalPages = Math.ceil(totalResults / resultsPerPage)
+            const paginationDiv = document.getElementById('pagination')
+            
+            if (totalPages <= 1) {
+                paginationDiv.style.display = 'none'
+                return
+            }
+
+            let paginationHTML = ''
+            
+            // 이전 페이지
+            if (currentPage > 1) {
+                paginationHTML += `<div class="page-btn" onclick="changePage(${currentPage - 1})">‹</div>`
+            }
+            
+            // 페이지 번호들
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                paginationHTML += `
+                    <div class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">
+                        ${i}
+                    </div>
+                `
+            }
+            
+            // 다음 페이지
+            if (currentPage < totalPages) {
+                paginationHTML += `<div class="page-btn" onclick="changePage(${currentPage + 1})">›</div>`
+            }
+
+            paginationDiv.innerHTML = paginationHTML
+            paginationDiv.style.display = 'flex'
+        }
+
+        function changePage(page) {
+            currentPage = page
+            displayResults(currentResults)
+            
+            // 스크롤을 결과 상단으로
+            document.querySelector('.results-container').scrollIntoView({ 
+                behavior: 'smooth' 
+            })
+        }
+
+        // 초기화
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('한국어 단어 사전 웹앱이 로드되었습니다.')
+        })
+    </script>
+</body>
+</html>
